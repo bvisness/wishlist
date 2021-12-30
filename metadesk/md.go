@@ -34,8 +34,8 @@ func PushTag(node *C.MD_Node, tag *C.MD_Node) {
 	C.MD_PushTag(node, tag)
 }
 
-func PushNewReference(list *C.MD_Node, target *C.MD_Node) *C.MD_Node {
-	_ret := C.MD_PushNewReference(list, target)
+func PushNewReference(arena *C.MD_Arena, list *C.MD_Node, target *C.MD_Node) *C.MD_Node {
+	_ret := C.MD_PushNewReference(arena, list, target)
 	return _ret
 }
 
@@ -97,9 +97,9 @@ func TagArgFromIndex(node *C.MD_Node, tag_string string, flags C.MD_MatchFlags, 
 	return _ret
 }
 
-func TagArgFromString(node *C.MD_Node, tag_string string, tag_str_flags C.MD_MatchFlags, arg_string int, arg_str_flags C.MD_MatchFlags) *C.MD_Node {
+func TagArgFromString(node *C.MD_Node, tag_string string, tag_str_flags C.MD_MatchFlags, arg_string string, arg_str_flags C.MD_MatchFlags) *C.MD_Node {
 	_tag_string := Str(defaultArena, tag_string)
-	_arg_string := C.int(arg_string)
+	_arg_string := Str(defaultArena, arg_string)
 	_ret := C.MD_TagArgFromString(node, _tag_string, tag_str_flags, _arg_string, arg_str_flags)
 	return _ret
 }
@@ -155,11 +155,6 @@ func FormatMessage(arena *C.MD_Arena, loc C.MD_CodeLoc, kind C.MD_MessageKind, _
 	__string := Str(defaultArena, _string)
 	_ret := C.MD_FormatMessage(arena, loc, kind, __string)
 	return GoStr(_ret)
-}
-
-func PrintMessage(file *FILE, loc C.MD_CodeLoc, kind C.MD_MessageKind, _string string) {
-	__string := Str(defaultArena, _string)
-	C.MD_PrintMessage(file, loc, kind, __string)
 }
 
 func NodeMatch(a *C.MD_Node, b *C.MD_Node, flags C.MD_MatchFlags) bool {

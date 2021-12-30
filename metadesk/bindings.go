@@ -88,6 +88,10 @@ nextfunc:
 		rawName := GoStr(def.string)
 		name := strings.TrimPrefix(rawName, "MD_")
 
+		if rawName == "MD_PrintMessage" {
+			continue
+		}
+
 		ret := C.MD_FirstNodeWithString(def.first_child, returnStr, 0)
 		returnTypeStr := ""
 		returnStr := ""

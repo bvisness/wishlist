@@ -19,6 +19,7 @@ MD_String8 S8Lit(const char *s) {
 }
 
 #include <stdlib.h>
+#include <string.h>
 */
 import "C"
 
@@ -29,30 +30,38 @@ import (
 
 var a = C.MD_ArenaAlloc()
 
-func Str(s string) (str C.MD_String8, free func()) {
-	cs := C.CString(s)
-	return C.S8Lit(cs), func() {
-		C.free(unsafe.Pointer(cs))
+// Converts a Go string to a Metadesk MD_String8. Allocates on the default arena.
+func Str(s string) C.MD_String8 {
+	sp := C.MD_ArenaPush(a, C.MD_u64(len(s)))
+	C.memcpy(sp, unsafe.Pointer(C._GoStringPtr(s)), C.size_t(len(s)))
+
+	return C.MD_String8{
+		str:  (*C.MD_u8)(sp),
+		size: C.MD_u64(len(s)),
 	}
 }
 
-func FromStr(s C.MD_String8) string {
+func GoStr(s C.MD_String8) string {
 	return string(C.GoBytes(unsafe.Pointer(s.str), (C.int)(s.size)))
 }
 
+func AllNodes(first *C.MD_Node) []*C.MD_Node {
+	var res []*C.MD_Node
+	for it := first; C.MD_NodeIsNil(it) == 0; it = it.next {
+		res = append(res, it)
+	}
+	return res
+}
+
 func blep() {
-	filename, _ := Str("mytestfile")
-	source, _ := Str("1 2 3 4")
-	res := C.MD_ParseWholeString(a, filename, source)
+	res := C.MD_ParseWholeString(a, Str("my test file"), Str("1 2 3 4"))
 
-	indent, _ := Str("  ")
 	var out C.MD_String8List
-	C.MD_DebugDumpFromNode(a, &out, res.node, 1, indent, C.MD_GenerateFlags_Tree)
+	C.MD_DebugDumpFromNode(a, &out, res.node, 1, Str("  "), C.MD_GenerateFlags_Tree)
 
-	mid, _ := Str("")
 	dump := C.MD_S8ListJoin(a, out, &C.MD_StringJoin{
-		mid: mid,
+		mid: Str(""),
 	})
 
-	fmt.Println(FromStr(dump))
+	fmt.Println(GoStr(dump))
 }

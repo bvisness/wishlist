@@ -1,9 +1,13 @@
 package metadesk
 
-import "testing"
+import (
+	"testing"
 
-func TestExistence(t *testing.T) {
-	t.Log("all clear, boss!")
+	"github.com/stretchr/testify/assert"
+)
+
+func TestStringRoundTrip(t *testing.T) {
+	assert.Equal(t, "foo", GoStr(Str("foo")))
 }
 
 func TestBlep(t *testing.T) {

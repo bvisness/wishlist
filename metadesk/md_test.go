@@ -7,9 +7,5 @@ import (
 )
 
 func TestStringRoundTrip(t *testing.T) {
-	assert.Equal(t, "foo", GoStr(Str("foo")))
-}
-
-func TestBlep(t *testing.T) {
-	blep()
+	assert.Equal(t, "foo", GoStr(Str(defaultArena, "foo")))
 }

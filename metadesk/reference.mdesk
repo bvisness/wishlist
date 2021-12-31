@@ -621,8 +621,6 @@ The @code node_count and @code total_size are automatically maintained by the he
         string: MD_String8,
     @doc("The raw string of the token labeling this node.")
         raw_string: MD_String8,
-    @doc("A hash of the string field using the metadesk built in hash function.")
-        string_hash: MD_u64,
 
     @doc("The raw string of the comment token before this node, if there is one.")
         prev_comment: MD_String8,

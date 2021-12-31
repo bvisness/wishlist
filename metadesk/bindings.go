@@ -1,4 +1,4 @@
-//go:generate rm md.go
+//go:generate rm -f md.go
 //go:generate go run ./gen/gen.go
 package metadesk
 
@@ -21,14 +21,22 @@ func (b bindingType) MDShuffle(name string) (string, string, string) {
 	// The returned value will be named "_ret", and the result
 	// value should be returned
 	switch b {
-	case "MD_String8":
-		return "string", "Str(defaultArena, " + name + ")", "return GoStr(_ret)"
-	case "MD_b32":
-		return "bool", "Bool(" + name + ")", "return _ret == 0"
-	case "MD_i64":
-		return "int", "C.MD_i64(" + name + ")", "return int(_ret)"
 	case "int":
 		return "int", "C.int(" + name + ")", "return int(_ret)"
+	case "MD_b32":
+		return "bool", "mdBool(" + name + ")", "return _ret == 0"
+	case "MD_i64":
+		return "int", "C.MD_i64(" + name + ")", "return int(_ret)"
+	case "MD_u64":
+		return "int", "C.MD_u64(" + name + ")", "return int(_ret)"
+	case "MD_MatchFlags":
+		return "MatchFlags", "C.MD_MatchFlags(" + name + ")", "return MatchFlags(_ret)"
+	case "MD_NodeKind":
+		return "NodeKind", "C.MD_NodeKind(" + name + ")", "return NodeKind(_ret)"
+	case "MD_String8":
+		return "string", "mdStr(defaultArena, " + name + ")", "return goStr(_ret)"
+	case "*MD_Node":
+		return "*Node", "mdNodeP(defaultArena, " + name + ")", "return goNodeP(_ret)"
 	default:
 		goType := string(b)
 		if strings.HasPrefix(goType, "MD_") {
@@ -44,7 +52,7 @@ func parseType(first *C.MD_Node) bindingType {
 	children := AllNodes(first)
 	var res bindingType
 	for _, token := range children {
-		res += bindingType(GoStr(token.string))
+		res += bindingType(goStr(token.string))
 	}
 	return res
 }
@@ -56,11 +64,11 @@ func parseType(first *C.MD_Node) bindingType {
 func GenBindings(reference string) []byte {
 	a := C.MD_ArenaAlloc()
 
-	ref := C.MD_ParseWholeString(a, Str(a, "reference"), Str(a, reference))
+	ref := C.MD_ParseWholeString(a, mdStr(a, "reference"), mdStr(a, reference))
 
-	funcStr := Str(a, "func")
-	sendStr := Str(a, "send")
-	returnStr := Str(a, "return")
+	funcStr := mdStr(a, "func")
+	sendStr := mdStr(a, "send")
+	returnStr := mdStr(a, "return")
 
 	var out strings.Builder
 	out.WriteString("// Generated from the official Metadesk reference. DO NOT EDIT!\n")
@@ -75,7 +83,7 @@ func GenBindings(reference string) []byte {
 nextfunc:
 	for _, def := range AllNodes(ref.node.first_child) {
 		isFunc := C.MD_NodeIsNil(C.MD_TagFromString(def, funcStr, 0)) == 0
-		send := GoStr(C.MD_TagFromString(def, sendStr, 0).first_child.string)
+		send := goStr(C.MD_TagFromString(def, sendStr, 0).first_child.string)
 
 		if !isFunc {
 			continue
@@ -87,7 +95,7 @@ nextfunc:
 			continue
 		}
 
-		rawName := GoStr(def.string)
+		rawName := goStr(def.string)
 		name := strings.TrimPrefix(rawName, "MD_")
 
 		ret := C.MD_FirstNodeWithString(def.first_child, returnStr, 0)
@@ -108,7 +116,7 @@ nextfunc:
 		var conversionExprs []string
 		var callArgs []string
 		for _, argNode := range AllNodes(def.first_child) {
-			originalName := GoStr(argNode.string)
+			originalName := goStr(argNode.string)
 			if originalName == "return" {
 				continue
 			}

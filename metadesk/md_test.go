@@ -7,5 +7,5 @@ import (
 )
 
 func TestStringRoundTrip(t *testing.T) {
-	assert.Equal(t, "foo", GoStr(Str(defaultArena, "foo")))
+	assert.Equal(t, "foo", goStr(mdStr(defaultArena, "foo")))
 }

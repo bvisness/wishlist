@@ -64,6 +64,5 @@ func TestStuff(t *testing.T) {
 
 	assert.Equal(t, "1", pos.ChildFromString("x", 0).FirstChild.String)
 	assert.Equal(t, "2", pos.ChildFromString("Y", StringMatchFlag_CaseInsensitive).FirstChild.String)
-	// TODO: I feel like this should work, but it clearly doesn't from the source either.
-	//assert.Equal(t, "3", pos.ChildFromString("zoop and zalad", StringMatchFlag_RightSideSloppy).FirstChild.String)
+	assert.Equal(t, "3", pos.ChildFromString("zoop and zalad", StringMatchFlag_RightSideSloppy).FirstChild.String)
 }

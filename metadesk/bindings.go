@@ -19,7 +19,8 @@ type bindingType string
 
 func (b bindingType) MDShuffle(name string) (string, string, string) {
 	// The returned value will be named "_ret", and the result
-	// value should be returned
+	// value should be returned.
+
 	switch b {
 	case "int":
 		return "int", "C.int(" + name + ")", "return int(_ret)"
@@ -38,19 +39,19 @@ func (b bindingType) MDShuffle(name string) (string, string, string) {
 	case "MD_NodeKind":
 		return "NodeKind", "C.MD_NodeKind(" + name + ")", "return NodeKind(_ret)"
 	case "MD_ParseResult":
-		return "ParseResult", "mdParseResult(" + name + ")", "return goParseResult(_ret)"
+		return "ParseResult", "mdParseResult(" + name + ")", "return md.goParseResult(_ret)"
 	case "MD_ParseSetRule":
 		return "ParseSetRule", "C.MD_ParseSetRule(" + name + ")", "return ParseSetRule(_ret)"
 	case "MD_String8":
-		return "string", "mdStr(defaultArena, " + name + ")", "return goStr(_ret)"
+		return "string", "mdStr(md.a, " + name + ")", "return goStr(_ret)"
 	case "MD_String8List":
-		return "[]string", "mdStrList(defaultArena, " + name + ")", "return goStrList(_ret)"
+		return "[]string", "md.mdStrList(" + name + ")", "return goStrList(_ret)"
 	case "*MD_Message":
-		return "*Message", "mdMessageP(defaultArena, " + name + ")", "return goMessageP(_ret)"
+		return "*Message", "md.mdMessageP(" + name + ")", "return md.goMessageP(_ret)"
 	case "*MD_MessageList":
-		return "*MessageList", "mdMessageListP(defaultArena, " + name + ")", "return goMessageListP(_ret)"
+		return "*MessageList", "md.mdMessageListP(" + name + ")", "return md.goMessageListP(_ret)"
 	case "*MD_Node":
-		return "*Node", "mdNodeP(defaultArena, " + name + ")", "return goNodeP(_ret)"
+		return "*Node", "md.mdNodeP(" + name + ")", "return md.goNodeP(_ret)"
 	default:
 		goType := string(b)
 		if strings.HasPrefix(goType, "MD_") {
@@ -91,7 +92,7 @@ func GenBindings(reference string) []byte {
 	out.WriteString(`// #include "md.h"` + "\n")
 	out.WriteString(`import "C"` + "\n")
 	out.WriteString("\n")
-	out.WriteString("var defaultArena = C.MD_ArenaAlloc()\n")
+	out.WriteString("var defaultInstance = NewMetadesk()\n")
 	out.WriteString("\n")
 
 nextfunc:
@@ -126,7 +127,10 @@ nextfunc:
 			continue
 		}
 
-		var inputArgs []string
+		type inputArg struct {
+			name, t string
+		}
+		var inputArgs []inputArg
 		var conversionExprs []string
 		var callArgs []string
 		for _, argNode := range AllNodes(def.first_child) {
@@ -155,9 +159,9 @@ nextfunc:
 				continue nextfunc
 			} else if inType == "*C.MD_Arena" {
 				// We always use the default arena
-				callArgs = append(callArgs, "defaultArena")
+				callArgs = append(callArgs, "md.a")
 			} else {
-				inputArgs = append(inputArgs, originalName+" "+inType)
+				inputArgs = append(inputArgs, inputArg{originalName, inType})
 				if expr != "" {
 					convertedName := "_" + originalName
 					conversionExprs = append(conversionExprs, convertedName+" := "+expr)
@@ -168,43 +172,75 @@ nextfunc:
 			}
 		}
 
-		// signature
-		out.WriteString("func " + name + "(")
+		// signature prep
+		signature := ""
+		signature += name + "("
 		for i, arg := range inputArgs {
 			if i > 0 {
-				out.WriteString(", ")
+				signature += ", "
 			}
-			out.WriteString(arg)
+			signature += arg.name + " " + arg.t
 		}
-		out.WriteString(")")
+		signature += ")"
 		if returnTypeStr != "" {
-			out.WriteString(" " + returnTypeStr)
+			signature += " " + returnTypeStr
 		}
-		out.WriteString(" {\n")
 
-		// args
+		//
+		// Bare function (default instance)
+		//
+		{
+			// signature
+			out.WriteString("func " + signature + " {\n")
 
-		for _, expr := range conversionExprs {
-			out.WriteString(`	` + expr + "\n")
-		}
-		callArgsStr := ""
-		for i, arg := range callArgs {
-			if i > 0 {
-				callArgsStr += ", "
+			// call to method on default instance
+			out.WriteString(`	`)
+			if returnTypeStr != "" {
+				out.WriteString("return ")
 			}
-			callArgsStr += arg
+			out.WriteString("defaultInstance." + name + "(")
+			for i, arg := range inputArgs {
+				if i > 0 {
+					out.WriteString(", ")
+				}
+				out.WriteString(arg.name)
+			}
+			out.WriteString(")\n")
+
+			out.WriteString("}\n")
+			out.WriteString("\n")
 		}
 
-		// call and return
-		if returnTypeStr == "" {
-			out.WriteString(`	C.` + rawName + "(" + callArgsStr + ")" + "\n")
-		} else {
-			out.WriteString(`	_ret := C.` + rawName + "(" + callArgsStr + ")" + "\n")
-			out.WriteString(`	` + returnStr + "\n")
-		}
+		//
+		// Method (any instance)
+		//
+		{
+			// signature
+			out.WriteString("func (md *Metadesk) " + signature + " {\n")
 
-		out.WriteString("}\n")
-		out.WriteString("\n")
+			// conversions
+			for _, expr := range conversionExprs {
+				out.WriteString(`	` + expr + "\n")
+			}
+
+			// call and return
+			callArgsStr := ""
+			for i, arg := range callArgs {
+				if i > 0 {
+					callArgsStr += ", "
+				}
+				callArgsStr += arg
+			}
+			if returnTypeStr == "" {
+				out.WriteString(`	C.` + rawName + "(" + callArgsStr + ")" + "\n")
+			} else {
+				out.WriteString(`	_ret := C.` + rawName + "(" + callArgsStr + ")" + "\n")
+				out.WriteString(`	` + returnStr + "\n")
+			}
+
+			out.WriteString("}\n")
+			out.WriteString("\n")
+		}
 	}
 
 	return []byte(out.String())

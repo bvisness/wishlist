@@ -1,5 +1,29 @@
 package metadesk
 
+// #include "md.h"
+import "C"
+
+import "unsafe"
+
+type Metadesk struct {
+	a    *C.MD_Arena
+	go2c map[interface{}]unsafe.Pointer
+	c2go map[unsafe.Pointer]interface{}
+}
+
+func NewMetadesk() Metadesk {
+	return Metadesk{
+		a:    C.MD_ArenaAlloc(),
+		go2c: make(map[interface{}]unsafe.Pointer),
+		c2go: make(map[unsafe.Pointer]interface{}),
+	}
+}
+
+func (md *Metadesk) track(goThing interface{}, cThing unsafe.Pointer) {
+	md.go2c[goThing] = cThing
+	md.c2go[cThing] = goThing
+}
+
 // These flags control matching rules in routines that perform matching on strings and Node trees. Not all flags are within this enum. These flags must not be overlapping with those in the StringMatchFlags enum, nor those in the NodeMatchFlags enum. This allows all flags to be associated with their respective behaviors, but also be combined when appropriate.
 //
 // NOTE FOR BINDINGS:

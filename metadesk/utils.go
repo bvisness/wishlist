@@ -29,71 +29,55 @@ func mdBool(b bool) C.MD_b32 {
 	}
 }
 
-// this guy shufflenates stuff from Go to C and the other way.
-// if you just follow a bunch of pointers then things go very
-// sad because there are cycles everywhere.
-type shufflenator struct {
-	go2c map[*Node]*C.MD_Node
-	c2go map[*C.MD_Node]*Node
-}
-
-func (s *shufflenator) mdNode(a *C.MD_Arena, n Node) C.MD_Node {
+func (md *Metadesk) mdNode(n Node) C.MD_Node {
 	return C.MD_Node{
-		next:        s.mdNodeP(a, n.Next),
-		prev:        s.mdNodeP(a, n.Prev),
-		parent:      s.mdNodeP(a, n.Parent),
-		first_child: s.mdNodeP(a, n.FirstChild),
-		last_child:  s.mdNodeP(a, n.LastChild),
+		next:        md.mdNodeP(n.Next),
+		prev:        md.mdNodeP(n.Prev),
+		parent:      md.mdNodeP(n.Parent),
+		first_child: md.mdNodeP(n.FirstChild),
+		last_child:  md.mdNodeP(n.LastChild),
 
-		first_tag: s.mdNodeP(a, n.FirstTag),
-		last_tag:  s.mdNodeP(a, n.LastTag),
+		first_tag: md.mdNodeP(n.FirstTag),
+		last_tag:  md.mdNodeP(n.LastTag),
 
 		kind:       C.MD_NodeKind(n.Kind),
 		flags:      C.MD_NodeFlags(n.Flags),
-		string:     mdStr(a, n.String),
-		raw_string: mdStr(a, n.RawString),
+		string:     mdStr(md.a, n.String),
+		raw_string: mdStr(md.a, n.RawString),
 
-		prev_comment: mdStr(a, n.PrevComment),
-		next_comment: mdStr(a, n.NextComment),
+		prev_comment: mdStr(md.a, n.PrevComment),
+		next_comment: mdStr(md.a, n.NextComment),
 
 		offset: C.MD_u64(n.Offset),
 
-		ref_target: s.mdNodeP(a, n.RefTarget),
+		ref_target: md.mdNodeP(n.RefTarget),
 	}
 }
 
-func mdNodeP(a *C.MD_Arena, n *Node) *C.MD_Node {
-	var s shufflenator
-	return s.mdNodeP(a, n)
-}
-
-func (s *shufflenator) mdNodeP(a *C.MD_Arena, n *Node) *C.MD_Node {
+func (md *Metadesk) mdNodeP(n *Node) *C.MD_Node {
 	if n == nil {
 		return nil
 	}
-	if existing, ok := s.go2c[n]; ok {
-		return existing
+	if existing, ok := md.go2c[n]; ok {
+		return (*C.MD_Node)(existing)
 	}
 
-	np := (*C.MD_Node)(C.MD_ArenaPush(a, C.sizeof_MD_Node))
-	*np = s.mdNode(a, *n)
-	if s.go2c == nil {
-		s.go2c = make(map[*Node]*C.MD_Node)
-	}
-	s.go2c[n] = np
+	np := (*C.MD_Node)(C.MD_ArenaPush(md.a, C.sizeof_MD_Node))
+	*np = md.mdNode(*n)
+	md.track(n, unsafe.Pointer(np))
 	return np
 }
 
-func (s *shufflenator) goNode(n C.MD_Node) Node {
+func (md *Metadesk) goNode(n C.MD_Node) Node {
 	return Node{
-		Next:       s.goNodeP(n.next),
-		Prev:       s.goNodeP(n.prev),
-		Parent:     s.goNodeP(n.parent),
-		FirstChild: s.goNodeP(n.first_child),
-		LastChild:  s.goNodeP(n.last_child),
+		Next:       md.goNodeP(n.next),
+		Prev:       md.goNodeP(n.prev),
+		Parent:     md.goNodeP(n.parent),
+		FirstChild: md.goNodeP(n.first_child),
+		LastChild:  md.goNodeP(n.last_child),
 
-		FirstTag: s.goNodeP(n.first_tag),
-		LastTag:  s.goNodeP(n.last_tag),
+		FirstTag: md.goNodeP(n.first_tag),
+		LastTag:  md.goNodeP(n.last_tag),
 
 		Kind:      NodeKind(n.kind),
 		Flags:     NodeFlags(n.flags),
@@ -105,28 +89,20 @@ func (s *shufflenator) goNode(n C.MD_Node) Node {
 
 		Offset: int(n.offset),
 
-		RefTarget: s.goNodeP(n.ref_target),
+		RefTarget: md.goNodeP(n.ref_target),
 	}
 }
 
-func goNodeP(n *C.MD_Node) *Node {
-	var s shufflenator
-	return s.goNodeP(n)
-}
-
-func (s *shufflenator) goNodeP(n *C.MD_Node) *Node {
+func (md *Metadesk) goNodeP(n *C.MD_Node) *Node {
 	if n == nil {
 		return nil
 	}
-	if existing, ok := s.c2go[n]; ok {
-		return existing
+	if existing, ok := md.c2go[unsafe.Pointer(n)]; ok {
+		return existing.(*Node)
 	}
 
-	res := s.goNode(*n)
-	if s.c2go == nil {
-		s.c2go = make(map[*C.MD_Node]*Node)
-	}
-	s.c2go[n] = &res
+	res := md.goNode(*n)
+	md.track(&res, unsafe.Pointer(n))
 	return &res
 }
 
@@ -146,119 +122,108 @@ func goStrList(l C.MD_String8List) []string {
 	return res
 }
 
-func mdParseResult(a *C.MD_Arena, r ParseResult) C.MD_ParseResult {
-	var s shufflenator
-	return s.mdParseResult(a, r)
-}
-
-func (s *shufflenator) mdParseResult(a *C.MD_Arena, r ParseResult) C.MD_ParseResult {
+func (md *Metadesk) mdParseResult(r ParseResult) C.MD_ParseResult {
 	return C.MD_ParseResult{
-		node:           s.mdNodeP(a, r.Node),
+		node:           md.mdNodeP(r.Node),
 		string_advance: C.MD_u64(r.StringAdvance),
-		errors:         s.mdMessageList(a, r.Errors),
+		errors:         md.mdMessageList(r.Errors),
 	}
 }
 
-func mdMessageListP(a *C.MD_Arena, l *MessageList) *C.MD_MessageList {
-	var s shufflenator
-	return s.mdMessageListP(a, l)
-}
-
-func (s *shufflenator) mdMessageListP(a *C.MD_Arena, l *MessageList) *C.MD_MessageList {
+func (md *Metadesk) mdMessageListP(l *MessageList) *C.MD_MessageList {
 	if l == nil {
 		return nil
 	}
+	if existing, ok := md.go2c[l]; ok {
+		return (*C.MD_MessageList)(existing)
+	}
 
-	lp := (*C.MD_MessageList)(C.MD_ArenaPush(a, C.sizeof_MD_MessageList))
-	*lp = s.mdMessageList(a, *l)
+	lp := (*C.MD_MessageList)(C.MD_ArenaPush(md.a, C.sizeof_MD_MessageList))
+	*lp = md.mdMessageList(*l)
+	md.track(l, unsafe.Pointer(lp))
 	return lp
 }
 
-func (s *shufflenator) mdMessageList(a *C.MD_Arena, l MessageList) C.MD_MessageList {
+func (md *Metadesk) mdMessageList(l MessageList) C.MD_MessageList {
 	var ml C.MD_MessageList
 	for i := range l.Messages {
-		C.MD_MessageListPush(&ml, s.mdMessageP(a, &l.Messages[i]))
+		C.MD_MessageListPush(&ml, md.mdMessageP(&l.Messages[i]))
 	}
 	return ml
 }
 
-func mdMessageP(a *C.MD_Arena, m *Message) *C.MD_Message {
-	var s shufflenator
-	return s.mdMessageP(a, m)
-}
-
-func (s *shufflenator) mdMessageP(a *C.MD_Arena, m *Message) *C.MD_Message {
+func (md *Metadesk) mdMessageP(m *Message) *C.MD_Message {
 	if m == nil {
 		return nil
 	}
-	// no existence check; messages don't cyclically refer to each other
+	if existing, ok := md.go2c[m]; ok {
+		return (*C.MD_Message)(existing)
+	}
 
-	mp := (*C.MD_Message)(C.MD_ArenaPush(a, C.sizeof_MD_Message))
-	*mp = s.mdMessage(a, *m)
+	mp := (*C.MD_Message)(C.MD_ArenaPush(md.a, C.sizeof_MD_Message))
+	*mp = md.mdMessage(*m)
+	md.track(m, unsafe.Pointer(mp))
 	return mp
 }
 
-func (s *shufflenator) mdMessage(a *C.MD_Arena, m Message) C.MD_Message {
+func (md *Metadesk) mdMessage(m Message) C.MD_Message {
 	return C.MD_Message{
 		// don't set next; that happens on push
-		node:   s.mdNodeP(a, m.Node),
+		node:   md.mdNodeP(m.Node),
 		kind:   C.MD_MessageKind(m.Kind),
-		string: mdStr(a, m.String),
+		string: mdStr(md.a, m.String),
 	}
 }
 
-func goParseResult(r C.MD_ParseResult) ParseResult {
-	var s shufflenator
-	return s.goParseResult(r)
-}
-
-func (s *shufflenator) goParseResult(r C.MD_ParseResult) ParseResult {
+func (md *Metadesk) goParseResult(r C.MD_ParseResult) ParseResult {
 	return ParseResult{
-		Node:          s.goNodeP(r.node),
+		Node:          md.goNodeP(r.node),
 		StringAdvance: int(r.string_advance),
-		Errors:        s.goMessageList(r.errors),
+		Errors:        md.goMessageList(r.errors),
 	}
 }
 
-func (s *shufflenator) goMessageListP(l *C.MD_MessageList) *MessageList {
+func (md *Metadesk) goMessageListP(l *C.MD_MessageList) *MessageList {
 	if l == nil {
 		return nil
 	}
+	if existing, ok := md.c2go[unsafe.Pointer(l)]; ok {
+		return existing.(*MessageList)
+	}
 
-	res := s.goMessageList(*l)
+	res := md.goMessageList(*l)
+	md.track(&res, unsafe.Pointer(l))
 	return &res
 }
 
-func (s *shufflenator) goMessageList(l C.MD_MessageList) MessageList {
+func (md *Metadesk) goMessageList(l C.MD_MessageList) MessageList {
 	res := MessageList{
 		MaxMessageKind: MessageKind(l.max_message_kind),
 		Messages:       make([]Message, 0, l.node_count),
 	}
 	for msg := l.first; msg != nil; msg = msg.next {
-		goMsg := s.goMessageP(msg)
+		goMsg := md.goMessageP(msg)
 		res.Messages = append(res.Messages, *goMsg)
 	}
 	return res
 }
 
-func goMessageP(m *C.MD_Message) *Message {
-	var s shufflenator
-	return s.goMessageP(m)
-}
-
-func (s *shufflenator) goMessageP(m *C.MD_Message) *Message {
+func (md *Metadesk) goMessageP(m *C.MD_Message) *Message {
 	if m == nil {
 		return nil
 	}
-	// no existence check; messages don't cyclically refer to each other
+	if existing, ok := md.c2go[unsafe.Pointer(m)]; ok {
+		return existing.(*Message)
+	}
 
-	res := s.goMessage(*m)
+	res := md.goMessage(*m)
+	md.track(&res, unsafe.Pointer(m))
 	return &res
 }
 
-func (s *shufflenator) goMessage(m C.MD_Message) Message {
+func (md *Metadesk) goMessage(m C.MD_Message) Message {
 	return Message{
-		Node:   s.goNodeP(m.node),
+		Node:   md.goNodeP(m.node),
 		Kind:   MessageKind(m.kind),
 		String: goStr(m.string),
 	}

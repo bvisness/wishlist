@@ -1987,22 +1987,6 @@ MD_MakeNodeError:
 }
 
 @send(Parsing) @func
-@doc("Allocates and initializes an MD_Message associated with a user-controlled pointer.")
-@see(MD_Message)
-MD_MakeDetachedError:
-{
-    @doc("The arena onto which the returned message should be allocated.")
-        arena: *MD_Arena,
-    @doc("The node associated with the message.")
-        node: *MD_Node;
-    @doc("The message kind, encoding its severity.")
-        kind: MD_MessageKind;
-    @doc("The string for the message.")
-        str: MD_String8;
-    return: *MD_Message
-}
-
-@send(Parsing) @func
 @doc("Allocates and initializes an MD_Message associated with a particular MD_Token.")
 @see(MD_Message)
 MD_MakeTokenError:

@@ -24,7 +24,7 @@ func (b bindingType) MDShuffle(name string) (string, string, string) {
 	case "MD_String8":
 		return "string", "Str(defaultArena, " + name + ")", "return GoStr(_ret)"
 	case "MD_b32":
-		return "bool", name + " == 0", "return _ret == 0"
+		return "bool", "Bool(" + name + ")", "return _ret == 0"
 	case "MD_i64":
 		return "int", "C.MD_i64(" + name + ")", "return int(_ret)"
 	case "int":
@@ -81,16 +81,14 @@ nextfunc:
 			continue
 		}
 
-		if send != "Nodes" {
+		switch send {
+		case "ExpressionParser", "Parsing", "Nodes":
+		default:
 			continue
 		}
 
 		rawName := GoStr(def.string)
 		name := strings.TrimPrefix(rawName, "MD_")
-
-		if rawName == "MD_PrintMessage" {
-			continue
-		}
 
 		ret := C.MD_FirstNodeWithString(def.first_child, returnStr, 0)
 		returnTypeStr := ""
@@ -100,20 +98,22 @@ nextfunc:
 			returnTypeStr, _, returnStr = returnType.MDShuffle("")
 		}
 
-		type argStuff struct {
-			t            string
-			originalName string
-			newName      string
-			expr         string
+		args := AllNodes(def.first_child)
+		if len(args) == 0 {
+			fmt.Printf("No documentation?? (%s)\n", rawName)
+			continue
 		}
-		var args []argStuff
+
+		var inputArgs []string
+		var conversionExprs []string
+		var callArgs []string
 		for _, argNode := range AllNodes(def.first_child) {
 			originalName := GoStr(argNode.string)
 			if originalName == "return" {
 				continue
 			}
 			if originalName == "..." {
-				fmt.Println("No bindings for varargs!")
+				fmt.Printf("No bindings for varargs! (%s)\n", rawName)
 				continue nextfunc
 			}
 
@@ -125,33 +125,34 @@ nextfunc:
 			t := parseType(argNode.first_child)
 			inType, expr, _ := t.MDShuffle(originalName)
 
-			var arg argStuff
-			if expr == "" {
-				// no conversion necessary
-				arg = argStuff{
-					t:            inType,
-					originalName: originalName,
-					newName:      originalName,
-					expr:         expr,
-				}
+			if inType == "*void" {
+				fmt.Printf("No bindings for void*! (%s)\n", rawName)
+				continue nextfunc
+			} else if inType == "*FILE" {
+				fmt.Printf("No bindings for FILE*! (%s)\n", rawName)
+				continue nextfunc
+			} else if inType == "*C.MD_Arena" {
+				// We always use the default arena
+				callArgs = append(callArgs, "defaultArena")
 			} else {
-				arg = argStuff{
-					t:            inType,
-					originalName: originalName,
-					newName:      "_" + originalName,
-					expr:         expr,
+				inputArgs = append(inputArgs, originalName+" "+inType)
+				if expr != "" {
+					convertedName := "_" + originalName
+					conversionExprs = append(conversionExprs, convertedName+" := "+expr)
+					callArgs = append(callArgs, convertedName)
+				} else {
+					callArgs = append(callArgs, originalName)
 				}
 			}
-			args = append(args, arg)
 		}
 
 		// signature
 		out.WriteString("func " + name + "(")
-		for i, arg := range args {
+		for i, arg := range inputArgs {
 			if i > 0 {
 				out.WriteString(", ")
 			}
-			out.WriteString(arg.originalName + " " + arg.t)
+			out.WriteString(arg)
 		}
 		out.WriteString(")")
 		if returnTypeStr != "" {
@@ -160,15 +161,8 @@ nextfunc:
 		out.WriteString(" {\n")
 
 		// args
-		var extraExprs []string
-		var callArgs []string
-		for _, arg := range args {
-			callArgs = append(callArgs, arg.newName)
-			if arg.expr != "" {
-				extraExprs = append(extraExprs, arg.newName+" := "+arg.expr)
-			}
-		}
-		for _, expr := range extraExprs {
+
+		for _, expr := range conversionExprs {
 			out.WriteString(`	` + expr + "\n")
 		}
 		callArgsStr := ""

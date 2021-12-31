@@ -21,6 +21,14 @@ func GoStr(s C.MD_String8) string {
 	return string(C.GoBytes(unsafe.Pointer(s.str), (C.int)(s.size)))
 }
 
+func Bool(b bool) C.MD_b32 {
+	if b {
+		return C.MD_b32(0)
+	} else {
+		return C.MD_b32(1)
+	}
+}
+
 func AllNodes(first *C.MD_Node) []*C.MD_Node {
 	var res []*C.MD_Node
 	for it := first; C.MD_NodeIsNil(it) == 0; it = it.next {

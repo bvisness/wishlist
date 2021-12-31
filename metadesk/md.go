@@ -11,9 +11,66 @@ func StringFromNodeKind(kind C.MD_NodeKind) string {
 	return GoStr(_ret)
 }
 
-func StringListFromNodeFlags(arena *C.MD_Arena, flags C.MD_NodeFlags) C.MD_String8List {
-	_ret := C.MD_StringListFromNodeFlags(arena, flags)
+func StringListFromNodeFlags(flags C.MD_NodeFlags) C.MD_String8List {
+	_ret := C.MD_StringListFromNodeFlags(defaultArena, flags)
 	return _ret
+}
+
+func ParseResultZero() C.MD_ParseResult {
+	_ret := C.MD_ParseResultZero()
+	return _ret
+}
+
+func ParseNodeSet(_string string, offset C.MD_u64, parent *C.MD_Node, rule C.MD_ParseSetRule) C.MD_ParseResult {
+	__string := Str(defaultArena, _string)
+	_ret := C.MD_ParseNodeSet(defaultArena, __string, offset, parent, rule)
+	return _ret
+}
+
+func ParseOneNode(_string string, offset C.MD_u64) C.MD_ParseResult {
+	__string := Str(defaultArena, _string)
+	_ret := C.MD_ParseOneNode(defaultArena, __string, offset)
+	return _ret
+}
+
+func ParseWholeString(filename string, contents string) C.MD_ParseResult {
+	_filename := Str(defaultArena, filename)
+	_contents := Str(defaultArena, contents)
+	_ret := C.MD_ParseWholeString(defaultArena, _filename, _contents)
+	return _ret
+}
+
+func ParseWholeFile(filename string) C.MD_ParseResult {
+	_filename := Str(defaultArena, filename)
+	_ret := C.MD_ParseWholeFile(defaultArena, _filename)
+	return _ret
+}
+
+func MakeErrorMarkerNode(parse_contents string, offset C.MD_u64) *C.MD_Node {
+	_parse_contents := Str(defaultArena, parse_contents)
+	_ret := C.MD_MakeErrorMarkerNode(defaultArena, _parse_contents, offset)
+	return _ret
+}
+
+func MakeNodeError(node *C.MD_Node, kind C.MD_MessageKind, str string) *C.MD_Message {
+	_str := Str(defaultArena, str)
+	_ret := C.MD_MakeNodeError(defaultArena, node, kind, _str)
+	return _ret
+}
+
+func MakeTokenError(parse_contents string, token C.MD_Token, kind C.MD_MessageKind, str string) *C.MD_Message {
+	_parse_contents := Str(defaultArena, parse_contents)
+	_str := Str(defaultArena, str)
+	_ret := C.MD_MakeTokenError(defaultArena, _parse_contents, token, kind, _str)
+	return _ret
+}
+
+func MessageListPush(list *C.MD_MessageList, error *C.MD_Message) {
+	C.MD_MessageListPush(list, error)
+}
+
+func MessageListConcat(list *C.MD_MessageList, to_push *C.MD_MessageList) {
+	C.MD_MessageListConcat(list, to_push)
 }
 
 func NodeIsNil(node *C.MD_Node) bool {
@@ -34,8 +91,8 @@ func PushTag(node *C.MD_Node, tag *C.MD_Node) {
 	C.MD_PushTag(node, tag)
 }
 
-func PushNewReference(arena *C.MD_Arena, list *C.MD_Node, target *C.MD_Node) *C.MD_Node {
-	_ret := C.MD_PushNewReference(arena, list, target)
+func PushNewReference(list *C.MD_Node, target *C.MD_Node) *C.MD_Node {
+	_ret := C.MD_PushNewReference(defaultArena, list, target)
 	return _ret
 }
 
@@ -151,9 +208,9 @@ func StringFromMessageKind(kind C.MD_MessageKind) string {
 	return GoStr(_ret)
 }
 
-func FormatMessage(arena *C.MD_Arena, loc C.MD_CodeLoc, kind C.MD_MessageKind, _string string) string {
+func FormatMessage(loc C.MD_CodeLoc, kind C.MD_MessageKind, _string string) string {
 	__string := Str(defaultArena, _string)
-	_ret := C.MD_FormatMessage(arena, loc, kind, __string)
+	_ret := C.MD_FormatMessage(defaultArena, loc, kind, __string)
 	return GoStr(_ret)
 }
 
@@ -165,5 +222,21 @@ func NodeMatch(a *C.MD_Node, b *C.MD_Node, flags C.MD_MatchFlags) bool {
 func NodeDeepMatch(a *C.MD_Node, b *C.MD_Node, flags C.MD_MatchFlags) bool {
 	_ret := C.MD_NodeDeepMatch(a, b, flags)
 	return _ret == 0
+}
+
+func ExprBakeOprTableFromList(list *C.MD_ExprOprList) C.MD_ExprOprTable {
+	_ret := C.MD_ExprBakeOprTableFromList(defaultArena, list)
+	return _ret
+}
+
+func ExprOprFromKindString(table *C.MD_ExprOprTable, kind C.MD_ExprOprKind, s string) *C.MD_ExprOpr {
+	_s := Str(defaultArena, s)
+	_ret := C.MD_ExprOprFromKindString(table, kind, _s)
+	return _ret
+}
+
+func ExprParse(op_table *C.MD_ExprOprTable, first *C.MD_Node, one_past_last *C.MD_Node) C.MD_ExprParseResult {
+	_ret := C.MD_ExprParse(defaultArena, op_table, first, one_past_last)
+	return _ret
 }
 

@@ -63,8 +63,8 @@ func (md *Metadesk) mdNodeP(n *Node) *C.MD_Node {
 	}
 
 	np := (*C.MD_Node)(C.MD_ArenaPush(md.a, C.sizeof_MD_Node))
-	*np = md.mdNode(*n)
 	md.track(n, unsafe.Pointer(np))
+	*np = md.mdNode(*n)
 	return np
 }
 
@@ -101,8 +101,9 @@ func (md *Metadesk) goNodeP(n *C.MD_Node) *Node {
 		return existing.(*Node)
 	}
 
-	res := md.goNode(*n)
+	var res Node
 	md.track(&res, unsafe.Pointer(n))
+	res = md.goNode(*n)
 	return &res
 }
 
@@ -139,8 +140,8 @@ func (md *Metadesk) mdMessageListP(l *MessageList) *C.MD_MessageList {
 	}
 
 	lp := (*C.MD_MessageList)(C.MD_ArenaPush(md.a, C.sizeof_MD_MessageList))
-	*lp = md.mdMessageList(*l)
 	md.track(l, unsafe.Pointer(lp))
+	*lp = md.mdMessageList(*l)
 	return lp
 }
 
@@ -161,8 +162,8 @@ func (md *Metadesk) mdMessageP(m *Message) *C.MD_Message {
 	}
 
 	mp := (*C.MD_Message)(C.MD_ArenaPush(md.a, C.sizeof_MD_Message))
-	*mp = md.mdMessage(*m)
 	md.track(m, unsafe.Pointer(mp))
+	*mp = md.mdMessage(*m)
 	return mp
 }
 
@@ -191,8 +192,9 @@ func (md *Metadesk) goMessageListP(l *C.MD_MessageList) *MessageList {
 		return existing.(*MessageList)
 	}
 
-	res := md.goMessageList(*l)
+	var res MessageList
 	md.track(&res, unsafe.Pointer(l))
+	res = md.goMessageList(*l)
 	return &res
 }
 
@@ -216,8 +218,9 @@ func (md *Metadesk) goMessageP(m *C.MD_Message) *Message {
 		return existing.(*Message)
 	}
 
-	res := md.goMessage(*m)
+	var res Message
 	md.track(&res, unsafe.Pointer(m))
+	res = md.goMessage(*m)
 	return &res
 }
 

@@ -7,7 +7,7 @@ import (
 	"github.com/bvisness/wishlist/metadesk"
 )
 
-// Don't run this directly! Run `go generate` on the root.
+// Don't run this directly! Run `go generate` on the metadesk package.
 func main() {
 	refFile, err := os.Open("reference.mdesk")
 	if err != nil {

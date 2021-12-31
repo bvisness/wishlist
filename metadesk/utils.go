@@ -62,6 +62,9 @@ func (md *Metadesk) mdNodeP(n *Node) *C.MD_Node {
 		return (*C.MD_Node)(existing)
 	}
 
+	// bonus! make sure this node is associated with this metadesk
+	n.md = md
+
 	np := (*C.MD_Node)(C.MD_ArenaPush(md.a, C.sizeof_MD_Node))
 	md.track(n, unsafe.Pointer(np))
 	*np = md.mdNode(*n)
@@ -90,6 +93,8 @@ func (md *Metadesk) goNode(n C.MD_Node) Node {
 		Offset: int(n.offset),
 
 		RefTarget: md.goNodeP(n.ref_target),
+
+		md: md,
 	}
 }
 

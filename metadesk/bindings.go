@@ -1,5 +1,4 @@
-//go:generate rm -f md.go
-//go:generate go run ./gen/gen.go
+//go:generate ./gen/gen_bindings.sh
 package metadesk
 
 /*
@@ -25,7 +24,7 @@ func (b bindingType) MDShuffle(name string) (string, string, string) {
 	case "int":
 		return "int", "C.int(" + name + ")", "return int(_ret)"
 	case "MD_b32":
-		return "bool", "mdBool(" + name + ")", "return _ret == 0"
+		return "bool", "mdBool(" + name + ")", "return _ret != 0"
 	case "MD_i64":
 		return "int", "C.MD_i64(" + name + ")", "return int(_ret)"
 	case "MD_u64":
@@ -217,6 +216,12 @@ nextfunc:
 		{
 			// signature
 			out.WriteString("func (md *Metadesk) " + signature + " {\n")
+
+			// nil check
+			out.WriteString(`	if md == nil {` + "\n")
+			out.WriteString(`		md = &defaultInstance` + "\n")
+			out.WriteString(`	}` + "\n")
+			out.WriteString("\n")
 
 			// conversions
 			for _, expr := range conversionExprs {

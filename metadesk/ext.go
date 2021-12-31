@@ -3,7 +3,9 @@ package metadesk
 // #include "md.h"
 import "C"
 
-import "strings"
+import (
+	"strings"
+)
 
 func (n *Node) Children() []*Node {
 	var res []*Node

@@ -24,6 +24,15 @@ func (md *Metadesk) track(goThing interface{}, cThing unsafe.Pointer) {
 	md.c2go[cThing] = goThing
 }
 
+// This type encodes source code locations using file, line, column coordinates.
+type CodeLoc struct {
+	Filename string
+	// Line numbers are 1 based, the lowest valid location is on line number 1.
+	Line int
+	// Column numbers are 1 based, the lowest valid location is on column number 1.
+	Column int
+}
+
 // These flags are used to control what is generated in a Node tree string generation function.
 type GenerateFlags int
 
@@ -225,4 +234,42 @@ const (
 	ParseSetRule_EndOnDelimiter ParseSetRule = iota
 	// The list of nodes is never terminated until there are no tokens remaining in the token stream; used when parsing entire files.
 	ParseSetRule_Global
+)
+
+// The type used for encoding data about any token produced by the lexer.
+type Token struct {
+	Kind TokenKind
+	// Flags that should be attached to a Node that uses this token to define its string. Only includes flags that can be understood by the lexer; is not the comprehensive set of node flags that a node needs.
+	NodeFlags NodeFlags
+	// The contents of this token, not including any boundary characters.
+	String string
+	// The full contents of the string used to form this token, including all boundary characters.
+	RawString string
+}
+
+type TokenKind int
+
+const (
+	// When this bit is set, the token follows C-like identifier rules. It may start with an alphabetic character or an underscore, and can contain alphanumeric characters or underscores inside it.
+	TokenKind_Identifier TokenKind = 1 << 0
+	// When this bit is set, the token follows C-like numeric literal rules.
+	TokenKind_NumericLiteral TokenKind = 1 << 1
+	// When this bit is set, the token was recognized as a string literal. These may be formed with C-like rules, with a single-quote or double-quote around the string contents. They may also be formed with Metadesk's additional rules. These rules allow using ` characters to mark the boundaries of the string, and also using triplets of any of these characters (```This is a string```) to allow newlines within the string's contents.
+	TokenKind_StringLiteral TokenKind = 1 << 2
+	// When this bit is set, the token was recognized as a symbolic character. Whether a character is considered symbolic is determined by the MD_CharIsSymbol function.
+	TokenKind_Symbol TokenKind = 1 << 3
+	// When this bit is set, the token is reserved for special uses by the Metadesk parser.
+	TokenKind_Reserved TokenKind = 1 << 4
+	// When this bit is set, the token was recognized as a comment. Comments can be formed in the traditional C-like ways, using // for single-line, or /* and */ for multiline. Metadesk differs, slightly, in that it allows nested multiline comments. So, every /* must be matched by a */.
+	TokenKind_Comment TokenKind = 1 << 5
+	// When this bit is set, the token contains only whitespace.
+	TokenKind_Whitespace TokenKind = 1 << 6
+	// When this bit is set, the token is a newline character.
+	TokenKind_Newline TokenKind = 1 << 7
+	// When this bit is set, the token is a comment that was malformed syntactically.
+	TokenKind_BrokenComment TokenKind = 1 << 8
+	// When this bit is set, the token is a string literal that was malformed syntactically.
+	TokenKind_BrokenStringLiteral TokenKind = 1 << 9
+	// When this bit is set, the token contains a character in an encoding that is not supported by the parser Metadesk.
+	TokenKind_BadCharacter TokenKind = 1 << 10
 )

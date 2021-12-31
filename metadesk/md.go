@@ -158,20 +158,21 @@ func (md *Metadesk) MakeNodeError(node *Node, kind MessageKind, str string) *Mes
 }
 
 // Allocates and initializes an MD_Message associated with a particular MD_Token.
-func MakeTokenError(parse_contents string, token C.MD_Token, kind MessageKind, str string) *Message {
+func MakeTokenError(parse_contents string, token Token, kind MessageKind, str string) *Message {
 	return defaultInstance.MakeTokenError(parse_contents, token, kind, str)
 }
 
 // Allocates and initializes an MD_Message associated with a particular MD_Token.
-func (md *Metadesk) MakeTokenError(parse_contents string, token C.MD_Token, kind MessageKind, str string) *Message {
+func (md *Metadesk) MakeTokenError(parse_contents string, token Token, kind MessageKind, str string) *Message {
 	if md == nil {
 		md = &defaultInstance
 	}
 
 	_parse_contents := mdStr(md.a, parse_contents)
+	_token := md.mdToken(token)
 	_kind := C.MD_MessageKind(kind)
 	_str := mdStr(md.a, str)
-	_ret := C.MD_MakeTokenError(md.a, _parse_contents, token, _kind, _str)
+	_ret := C.MD_MakeTokenError(md.a, _parse_contents, _token, _kind, _str)
 	return md.goMessageP(_ret)
 }
 
@@ -630,19 +631,20 @@ func (md *Metadesk) StringFromMessageKind(kind MessageKind) string {
 }
 
 // Provides a standard way to format a message string that is associated with an MD_CodeLoc and an MD_MessageKind.
-func FormatMessage(loc C.MD_CodeLoc, kind MessageKind, _string string) string {
+func FormatMessage(loc CodeLoc, kind MessageKind, _string string) string {
 	return defaultInstance.FormatMessage(loc, kind, _string)
 }
 
 // Provides a standard way to format a message string that is associated with an MD_CodeLoc and an MD_MessageKind.
-func (md *Metadesk) FormatMessage(loc C.MD_CodeLoc, kind MessageKind, _string string) string {
+func (md *Metadesk) FormatMessage(loc CodeLoc, kind MessageKind, _string string) string {
 	if md == nil {
 		md = &defaultInstance
 	}
 
+	_loc := md.mdCodeLoc(loc)
 	_kind := C.MD_MessageKind(kind)
 	__string := mdStr(md.a, _string)
-	_ret := C.MD_FormatMessage(md.a, loc, _kind, __string)
+	_ret := C.MD_FormatMessage(md.a, _loc, _kind, __string)
 	return goStr(_ret)
 }
 
@@ -680,53 +682,5 @@ func (md *Metadesk) NodeDeepMatch(a *Node, b *Node, flags MatchFlags) bool {
 	_flags := C.MD_MatchFlags(flags)
 	_ret := C.MD_NodeDeepMatch(_a, _b, _flags)
 	return _ret != 0
-}
-
-// Convert a simple list of operators into an operator table - and performing correctness checks along the way.
-func ExprBakeOprTableFromList(list *C.MD_ExprOprList) C.MD_ExprOprTable {
-	return defaultInstance.ExprBakeOprTableFromList(list)
-}
-
-// Convert a simple list of operators into an operator table - and performing correctness checks along the way.
-func (md *Metadesk) ExprBakeOprTableFromList(list *C.MD_ExprOprList) C.MD_ExprOprTable {
-	if md == nil {
-		md = &defaultInstance
-	}
-
-	_ret := C.MD_ExprBakeOprTableFromList(md.a, list)
-	return _ret
-}
-
-// Get an operator info pointer from an operator table by looking up it's operator kind and name.
-func ExprOprFromKindString(table *C.MD_ExprOprTable, kind C.MD_ExprOprKind, s string) *C.MD_ExprOpr {
-	return defaultInstance.ExprOprFromKindString(table, kind, s)
-}
-
-// Get an operator info pointer from an operator table by looking up it's operator kind and name.
-func (md *Metadesk) ExprOprFromKindString(table *C.MD_ExprOprTable, kind C.MD_ExprOprKind, s string) *C.MD_ExprOpr {
-	if md == nil {
-		md = &defaultInstance
-	}
-
-	_s := mdStr(md.a, s)
-	_ret := C.MD_ExprOprFromKindString(table, kind, _s)
-	return _ret
-}
-
-// Create an expression tree from a range of Metadesk nodes.
-func ExprParse(op_table *C.MD_ExprOprTable, first *Node, one_past_last *Node) C.MD_ExprParseResult {
-	return defaultInstance.ExprParse(op_table, first, one_past_last)
-}
-
-// Create an expression tree from a range of Metadesk nodes.
-func (md *Metadesk) ExprParse(op_table *C.MD_ExprOprTable, first *Node, one_past_last *Node) C.MD_ExprParseResult {
-	if md == nil {
-		md = &defaultInstance
-	}
-
-	_first := md.mdNodeP(first)
-	_one_past_last := md.mdNodeP(one_past_last)
-	_ret := C.MD_ExprParse(md.a, op_table, _first, _one_past_last)
-	return _ret
 }
 

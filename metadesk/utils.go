@@ -237,6 +237,40 @@ func (md *Metadesk) goMessage(m C.MD_Message) Message {
 	}
 }
 
+func (md *Metadesk) mdCodeLoc(l CodeLoc) C.MD_CodeLoc {
+	return C.MD_CodeLoc{
+		filename: mdStr(md.a, l.Filename),
+		line:     C.MD_u32(l.Line),
+		column:   C.MD_u32(l.Column),
+	}
+}
+
+func (md *Metadesk) goCodeLoc(l C.MD_CodeLoc) CodeLoc {
+	return CodeLoc{
+		Filename: goStr(l.filename),
+		Line:     int(l.line),
+		Column:   int(l.column),
+	}
+}
+
+func (md *Metadesk) mdToken(t Token) C.MD_Token {
+	return C.MD_Token{
+		kind:       C.MD_TokenKind(t.Kind),
+		node_flags: C.MD_NodeFlags(t.NodeFlags),
+		string:     mdStr(md.a, t.String),
+		raw_string: mdStr(md.a, t.RawString),
+	}
+}
+
+func (md *Metadesk) goToken(t C.MD_Token) Token {
+	return Token{
+		Kind:      TokenKind(t.kind),
+		NodeFlags: NodeFlags(t.node_flags),
+		String:    goStr(t.string),
+		RawString: goStr(t.raw_string),
+	}
+}
+
 func AllNodes(first *C.MD_Node) []*C.MD_Node {
 	var res []*C.MD_Node
 	for it := first; C.MD_NodeIsNil(it) == 0; it = it.next {

@@ -29,6 +29,8 @@ func (b bindingType) MDShuffle(name string) (string, string, string) {
 		return "int", "C.MD_i64(" + name + ")", "return int(_ret)"
 	case "MD_u64":
 		return "int", "C.MD_u64(" + name + ")", "return int(_ret)"
+	case "MD_CodeLoc":
+		return "CodeLoc", "md.mdCodeLoc(" + name + ")", "return md.goCodeLoc(_ret)"
 	case "MD_MatchFlags":
 		return "MatchFlags", "C.MD_MatchFlags(" + name + ")", "return MatchFlags(_ret)"
 	case "MD_MessageKind":
@@ -45,6 +47,8 @@ func (b bindingType) MDShuffle(name string) (string, string, string) {
 		return "string", "mdStr(md.a, " + name + ")", "return goStr(_ret)"
 	case "MD_String8List":
 		return "[]string", "md.mdStrList(" + name + ")", "return goStrList(_ret)"
+	case "MD_Token":
+		return "Token", "md.mdToken(" + name + ")", "return goToken(_ret)"
 	case "*MD_Message":
 		return "*Message", "md.mdMessageP(" + name + ")", "return md.goMessageP(_ret)"
 	case "*MD_MessageList":
@@ -105,7 +109,7 @@ nextfunc:
 		}
 
 		switch send {
-		case "ExpressionParser", "Parsing", "Nodes":
+		case "Parsing", "Nodes":
 		default:
 			continue
 		}

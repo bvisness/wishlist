@@ -82,6 +82,7 @@ func GenBindings(reference string) []byte {
 
 	funcStr := mdStr(a, "func")
 	sendStr := mdStr(a, "send")
+	docStr := mdStr(a, "doc")
 	returnStr := mdStr(a, "return")
 
 	var out strings.Builder
@@ -185,10 +186,17 @@ nextfunc:
 			signature += " " + returnTypeStr
 		}
 
+		// docs prep
+		doc := goStr(C.MD_TagFromString(def, docStr, 0).first_child.string)
+		doc = strings.ReplaceAll(doc, "@code ", "")
+
 		//
 		// Bare function (default instance)
 		//
 		{
+			// doc comment
+			out.WriteString("// " + doc + "\n")
+
 			// signature
 			out.WriteString("func " + signature + " {\n")
 
@@ -214,6 +222,9 @@ nextfunc:
 		// Method (any instance)
 		//
 		{
+			// doc comment
+			out.WriteString("// " + doc + "\n")
+
 			// signature
 			out.WriteString("func (md *Metadesk) " + signature + " {\n")
 

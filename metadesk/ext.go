@@ -13,10 +13,12 @@ func (n *Node) Children() []*Node {
 	return res
 }
 
+// Finds a child of 'node' with a string matching 'child_string', where the rules of matching are determined by 'flags'.
 func (n *Node) ChildFromString(child_string string, flags MatchFlags) *Node {
 	return n.md.ChildFromString(n, child_string, flags)
 }
 
+// Returns '1' if the 'node' is nil, or '0' otherwise. A nil node pointer is not equivalent to a null pointer. It can still be dereferenced, and is treated as a dummy placeholder node value.
 func (n *Node) IsNil() bool {
 	return n.md.NodeIsNil(n)
 }

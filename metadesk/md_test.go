@@ -61,4 +61,9 @@ func TestStuff(t *testing.T) {
 	assert.True(t, vel.Children()[0].Flags&NodeFlag_Numeric != 0)
 	assert.True(t, vel.Children()[1].Flags&NodeFlag_Numeric != 0)
 	assert.True(t, vel.Children()[2].Flags&NodeFlag_Numeric != 0)
+
+	assert.Equal(t, "1", pos.ChildFromString("x", 0).FirstChild.String)
+	assert.Equal(t, "2", pos.ChildFromString("Y", StringMatchFlag_CaseInsensitive).FirstChild.String)
+	// TODO: I feel like this should work, but it clearly doesn't from the source either.
+	//assert.Equal(t, "3", pos.ChildFromString("zoop and zalad", StringMatchFlag_RightSideSloppy).FirstChild.String)
 }

@@ -29,16 +29,6 @@ func mdBool(b bool) C.MD_b32 {
 	}
 }
 
-func mdNodeP(a *C.MD_Arena, n *Node) *C.MD_Node {
-	var s shufflenator
-	return s.mdNodeP(a, n)
-}
-
-func goNodeP(n *C.MD_Node) *Node {
-	var s shufflenator
-	return s.goNodeP(n)
-}
-
 // this guy shufflenates stuff from Go to C and the other way.
 // if you just follow a bunch of pointers then things go very
 // sad because there are cycles everywhere.
@@ -70,6 +60,11 @@ func (s *shufflenator) mdNode(a *C.MD_Arena, n Node) C.MD_Node {
 
 		ref_target: s.mdNodeP(a, n.RefTarget),
 	}
+}
+
+func mdNodeP(a *C.MD_Arena, n *Node) *C.MD_Node {
+	var s shufflenator
+	return s.mdNodeP(a, n)
 }
 
 func (s *shufflenator) mdNodeP(a *C.MD_Arena, n *Node) *C.MD_Node {
@@ -114,6 +109,11 @@ func (s *shufflenator) goNode(n C.MD_Node) Node {
 	}
 }
 
+func goNodeP(n *C.MD_Node) *Node {
+	var s shufflenator
+	return s.goNodeP(n)
+}
+
 func (s *shufflenator) goNodeP(n *C.MD_Node) *Node {
 	if n == nil {
 		return nil
@@ -128,6 +128,140 @@ func (s *shufflenator) goNodeP(n *C.MD_Node) *Node {
 	}
 	s.c2go[n] = &res
 	return &res
+}
+
+func mdStrList(a *C.MD_Arena, l []string) C.MD_String8List {
+	ml := C.MD_String8List{}
+	for _, s := range l {
+		C.MD_S8ListPush(a, &ml, mdStr(a, s))
+	}
+	return ml
+}
+
+func goStrList(l C.MD_String8List) []string {
+	res := make([]string, 0, l.node_count)
+	for node := l.first; node != nil; node = node.next {
+		res = append(res, goStr(node.string))
+	}
+	return res
+}
+
+func mdParseResult(a *C.MD_Arena, r ParseResult) C.MD_ParseResult {
+	var s shufflenator
+	return s.mdParseResult(a, r)
+}
+
+func (s *shufflenator) mdParseResult(a *C.MD_Arena, r ParseResult) C.MD_ParseResult {
+	return C.MD_ParseResult{
+		node:           s.mdNodeP(a, r.Node),
+		string_advance: C.MD_u64(r.StringAdvance),
+		errors:         s.mdMessageList(a, r.Errors),
+	}
+}
+
+func mdMessageListP(a *C.MD_Arena, l *MessageList) *C.MD_MessageList {
+	var s shufflenator
+	return s.mdMessageListP(a, l)
+}
+
+func (s *shufflenator) mdMessageListP(a *C.MD_Arena, l *MessageList) *C.MD_MessageList {
+	if l == nil {
+		return nil
+	}
+
+	lp := (*C.MD_MessageList)(C.MD_ArenaPush(a, C.sizeof_MD_MessageList))
+	*lp = s.mdMessageList(a, *l)
+	return lp
+}
+
+func (s *shufflenator) mdMessageList(a *C.MD_Arena, l MessageList) C.MD_MessageList {
+	var ml C.MD_MessageList
+	for i := range l.Messages {
+		C.MD_MessageListPush(&ml, s.mdMessageP(a, &l.Messages[i]))
+	}
+	return ml
+}
+
+func mdMessageP(a *C.MD_Arena, m *Message) *C.MD_Message {
+	var s shufflenator
+	return s.mdMessageP(a, m)
+}
+
+func (s *shufflenator) mdMessageP(a *C.MD_Arena, m *Message) *C.MD_Message {
+	if m == nil {
+		return nil
+	}
+	// no existence check; messages don't cyclically refer to each other
+
+	mp := (*C.MD_Message)(C.MD_ArenaPush(a, C.sizeof_MD_Message))
+	*mp = s.mdMessage(a, *m)
+	return mp
+}
+
+func (s *shufflenator) mdMessage(a *C.MD_Arena, m Message) C.MD_Message {
+	return C.MD_Message{
+		// don't set next; that happens on push
+		node:   s.mdNodeP(a, m.Node),
+		kind:   C.MD_MessageKind(m.Kind),
+		string: mdStr(a, m.String),
+	}
+}
+
+func goParseResult(r C.MD_ParseResult) ParseResult {
+	var s shufflenator
+	return s.goParseResult(r)
+}
+
+func (s *shufflenator) goParseResult(r C.MD_ParseResult) ParseResult {
+	return ParseResult{
+		Node:          s.goNodeP(r.node),
+		StringAdvance: int(r.string_advance),
+		Errors:        s.goMessageList(r.errors),
+	}
+}
+
+func (s *shufflenator) goMessageListP(l *C.MD_MessageList) *MessageList {
+	if l == nil {
+		return nil
+	}
+
+	res := s.goMessageList(*l)
+	return &res
+}
+
+func (s *shufflenator) goMessageList(l C.MD_MessageList) MessageList {
+	res := MessageList{
+		MaxMessageKind: MessageKind(l.max_message_kind),
+		Messages:       make([]Message, 0, l.node_count),
+	}
+	for msg := l.first; msg != nil; msg = msg.next {
+		goMsg := s.goMessageP(msg)
+		res.Messages = append(res.Messages, *goMsg)
+	}
+	return res
+}
+
+func goMessageP(m *C.MD_Message) *Message {
+	var s shufflenator
+	return s.goMessageP(m)
+}
+
+func (s *shufflenator) goMessageP(m *C.MD_Message) *Message {
+	if m == nil {
+		return nil
+	}
+	// no existence check; messages don't cyclically refer to each other
+
+	res := s.goMessage(*m)
+	return &res
+}
+
+func (s *shufflenator) goMessage(m C.MD_Message) Message {
+	return Message{
+		Node:   s.goNodeP(m.node),
+		Kind:   MessageKind(m.kind),
+		String: goStr(m.string),
+	}
 }
 
 func AllNodes(first *C.MD_Node) []*C.MD_Node {

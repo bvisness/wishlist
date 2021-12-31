@@ -31,10 +31,24 @@ func (b bindingType) MDShuffle(name string) (string, string, string) {
 		return "int", "C.MD_u64(" + name + ")", "return int(_ret)"
 	case "MD_MatchFlags":
 		return "MatchFlags", "C.MD_MatchFlags(" + name + ")", "return MatchFlags(_ret)"
+	case "MD_MessageKind":
+		return "MessageKind", "C.MD_MessageKind(" + name + ")", "return MessageKind(_ret)"
+	case "MD_NodeFlags":
+		return "NodeFlags", "C.MD_NodeFlags(" + name + ")", "return NodeFlags(_ret)"
 	case "MD_NodeKind":
 		return "NodeKind", "C.MD_NodeKind(" + name + ")", "return NodeKind(_ret)"
+	case "MD_ParseResult":
+		return "ParseResult", "mdParseResult(" + name + ")", "return goParseResult(_ret)"
+	case "MD_ParseSetRule":
+		return "ParseSetRule", "C.MD_ParseSetRule(" + name + ")", "return ParseSetRule(_ret)"
 	case "MD_String8":
 		return "string", "mdStr(defaultArena, " + name + ")", "return goStr(_ret)"
+	case "MD_String8List":
+		return "[]string", "mdStrList(defaultArena, " + name + ")", "return goStrList(_ret)"
+	case "*MD_Message":
+		return "*Message", "mdMessageP(defaultArena, " + name + ")", "return goMessageP(_ret)"
+	case "*MD_MessageList":
+		return "*MessageList", "mdMessageListP(defaultArena, " + name + ")", "return goMessageListP(_ret)"
 	case "*MD_Node":
 		return "*Node", "mdNodeP(defaultArena, " + name + ")", "return goNodeP(_ret)"
 	default:
